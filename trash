@@ -1,0 +1,144 @@
+import speech_recognition as sr
+import pyttsx3
+import wikipedia
+import datetime
+import os
+import webbrowser
+import random
+import smtplib
+import requests
+
+# Initialize the text-to-speech engine
+engine = pyttsx3.init()
+
+def speak(text):
+    engine.say(text)
+    engine.runAndWait()
+
+def take_command():
+    r = sr.Recognizer()
+    with sr.Microphone() as source:
+        print("Listening...")
+        r.pause_threshold = 1
+        audio = r.listen(source)
+
+    try:
+        print("Recognizing...")
+        query = r.recognize_google(audio, language='en-in')
+        print(f"User said: {query}\n")
+    except Exception as e:
+        print("Say that again please...")
+        return "None"
+    return query
+
+def play_music():
+    music_dir = 'path_to_your_music_directory'
+    songs = os.listdir(music_dir)
+    song = random.choice(songs)
+    os.startfile(os.path.join(music_dir, song))
+
+def send_email(to, content):
+    try:
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.ehlo()
+        server.starttls()
+        server.login('your_email@gmail.com', 'your_password')
+        server.sendmail('your_email@gmail.com', to, content)
+        server.close()
+        speak("Email has been sent!")
+    except Exception as e:
+        print(e)
+        speak("Sorry, I am not able to send this email")
+
+def get_weather(city):
+    api_key = 'your_api_key'
+    base_url = 'http://api.openweathermap.org/data/2.5/weather?'
+    complete_url = base_url + 'q=' + city + '&appid=' + api_key
+    response = requests.get(complete_url)
+    data = response.json()
+    
+    if data['cod'] != '404':
+        main = data['main']
+        weather = data['weather'][0]
+        temp = main['temp'] - 273.15
+        humidity = main['humidity']
+        description = weather['description']
+        weather_report = f"The temperature is {temp:.2f} degrees Celsius with {description} and a humidity of {humidity}%"
+        speak(weather_report)
+    else:
+        speak("City Not Found")
+
+def open_application(app_name):
+    if 'chrome' in app_name:
+        os.startfile('C:\Program Files\Google\Chrome\Application\chrome.exe')
+    elif 'word' in app_name:
+        os.startfile('C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE')
+    else:
+        speak("Application not found")
+
+def mic():
+    speak("How can I help you?")
+    while True:
+        query = take_command().lower()
+
+        if 'wikipedia' in query:
+            speak('Searching Wikipedia...')
+            query = query.replace("wikipedia", "")
+            results = wikipedia.summary(query, sentences=2)
+            speak("According to Wikipedia")
+            print(results)
+            speak(results)
+        
+        elif 'open calculator' in query:
+            speak("Opening Calculator")
+            if os.name == 'nt':
+                os.system('calc')
+            else:
+                speak("Calculator opening is not supported on this OS.")
+        
+        elif 'open youtube' in query:
+            speak("Opening YouTube")
+            webbrowser.open('https://www.youtube.com')
+        
+        elif 'time' in query:
+            str_time = datetime.datetime.now().strftime("%H:%M:%S")
+            speak(f"The time is {str_time}")
+            print(str_time)
+        
+        elif 'date' in query:
+            str_date = datetime.datetime.now().strftime("%Y-%m-%d")
+            speak(f"Today's date is {str_date}")
+            print(str_date)
+        
+        elif 'play music' in query:
+            speak("Playing music")
+            play_music()
+        
+        elif 'send email' in query:
+            try:
+                speak("What should I say?")
+                content = take_command()
+                speak("Who should I send it to?")
+                to = 'recipient_email@example.com'  # Update with actual recipient's email
+                send_email(to, content)
+            except Exception as e:
+                speak("Sorry, I am not able to send this email")
+
+        elif 'weather' in query:
+            speak("Which city's weather do you want to know?")
+            city = take_command()
+            get_weather(city)
+        
+        elif 'open' in query:
+            open_application(query)
+        
+        elif 'exit' in query:
+            speak("Goodbye!")
+            break
+        
+        else:
+            speak("I didn't catch that. Please say it again.")
+
+if __name__ == "__main__":
+    mic()
+
